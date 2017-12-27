@@ -1,0 +1,36 @@
+{
+    "manifest_version": 2,
+    "name": "",
+    "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
+    "description": "",
+    "version": "",
+    "browser_action": {
+        "default_icon": "/css/icon.png",
+        "default_popup": "/popup.html"
+    },
+    "background": {
+        "scripts": ["/js/jquery-3.2.1.min.js","background.js"],
+        "persistent": false
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "https://www.google.com",
+                "https://www.google.com/*",
+                "https://www.google.com.*",
+                "https://www.google.com.*/*"
+            ],
+            "js": ["content.js"]
+        }
+    ],
+    "permissions": [
+        "https://www.google.com",
+        "https://www.google.com/*",
+        "https://www.google.com.*",
+        "https://www.google.com.*/*",
+        "tabs",
+        "storage",
+        "background",
+        "alarms"
+    ]
+}
