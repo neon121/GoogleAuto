@@ -3,12 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <title>GoogleAutoclicker</title>
+    <style>
+        div {
+            width: 500px;
+        }
+        input[type=text] {
+            width: 90%;
+        }
+    </style>
 </head>
-<body>
-    <div>
-        <input name="search_term" value="какой-то запрос"/><br/>
-        <input name="click_url" value="https://meduza.io/feature/2017/03/07/kak-dumaete-kakoy-zapros-samyy-rasprostranennyy" />
-        <input name="wait_seconds" value="1" />
-    </div>
-</body>
+    <body>
+        <div style="width:500px; ">
+            <input type="text" name="search_term" value="какой-то запрос"/><br/>
+            <input type="text" name="click_url"
+                   value="https://meduza.io/feature/2017/03/07/kak-dumaete-kakoy-zapros-samyy-rasprostranennyy" /><br/>
+            <input type="text" name="wait_seconds" value="1" /><br/>
+            <input type="button" value="save"/>
+        </div>
+    </body>
 </html>

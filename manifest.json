@@ -1,33 +1,30 @@
 {
     "manifest_version": 2,
-    "name": "",
+    "name": "Google Scrapper",
     "content_security_policy": "script-src 'self' 'unsafe-eval'; object-src 'self'",
-    "description": "",
-    "version": "",
+    "description": "Google Scrapper",
+    "version": "0.1",
     "browser_action": {
-        "default_icon": "/css/icon.png",
         "default_popup": "/popup.html"
     },
     "background": {
-        "scripts": ["/js/jquery-3.2.1.min.js","background.js"],
-        "persistent": false
+        "scripts": ["/js/background.js"],
+        "persistent": true
     },
     "content_scripts": [
         {
             "matches": [
-                "https://www.google.com",
                 "https://www.google.com/*",
-                "https://www.google.com.*",
-                "https://www.google.com.*/*"
+                "https://www.google.tm/*"
             ],
-            "js": ["content.js"]
+            "js": ["/js/jquery-3.2.1.min.js", "/js/content.js"]
         }
     ],
+    "web_accessible_resources": [
+        "js/include.js"
+    ],
     "permissions": [
-        "https://www.google.com",
         "https://www.google.com/*",
-        "https://www.google.com.*",
-        "https://www.google.com.*/*",
         "tabs",
         "storage",
         "background",
