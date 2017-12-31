@@ -1,64 +1,81 @@
-console.log('included');
-var inputs = document.getElementsByTagName('input');
-for (var i = 0; i < inputs.length; i++) {
-    var input = inputs[i];
-    if(input.id == 'lst-ib') break;
-}
-window.e1 = null; window.e2 = null; window.opt = null;
-input.onkeydown = function(e) {
-    if (e.isTrusted) {
-        e1 = e;
-        doKeyboardEvent1('down', e, this);
+console.log('content.js ready');
+var readyDate;
+var t = setInterval(function() {
+    if (document.readyState == 'complete') {
+        readyDate = new Date();
+        clearInterval(t);
     }
-    else {
-        e2 = e;
-        console.clear();
-        ccc();
-    }
-};
+}, 10);
 
-window.ccc = function() {
-    for (var i in e1) {
-        if (i == 'timeStamp' || i == 'path' || i == 'isTrusted' || i == 'sourceCapabilities') continue;
-        if (e1[i] != e2[i]) console.log(i, e1[i],  e2[i], opt[i]);
+chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
+    console.log(request);
+    try {
+        switch (request.action) {
+            case 'getReadyDate':
+                if (readyDate == undefined) sendResponse(false);
+                else sendResponse(readyDate.getTime());
+                break;
+            case 'enterSearchTerm':
+                var inputs = document.getElementsByTagName('form')[0].getElementsByTagName('input');
+                for (var i = 0; i < inputs.length; i++) {
+                    var input = inputs[i];
+                    if (input.type == 'text' && input.spellcheck == false) break;
+                }
+                input.value = request.search_term;
+                setTimeout(
+                    function () {
+                        document.getElementsByTagName('form')[0].submit();
+                        sendResponse('done');
+                    },
+                    rand(250, 1500)
+                );
+                sendResponse(true);
+                break;
+            case 'getLinks':
+                var nodes = getANodes();
+                var resp = [];
+                for (var i = 0; i < nodes.length; i++) resp.push(nodes[i].href)
+                sendResponse(resp);
+                break;
+            case 'clickLink':
+                var nodes = getANodes();
+                nodes[request.linkId].click();
+                sendResponse(true);
+                break;
+            case 'nextPage':
+                var divs = document.getElementsByTagName('div');
+                for (i = 0; i < divs.length; i++) {
+                    var div = divs[i];
+                    if (
+                        div.id == 'foot' &&
+                        div.attributes.role &&
+                        div.attributes.role.value == 'navigation'
+                    ) break;
+                }
+                var tds = div.getElementsByTagName('table')[0].getElementsByTagName('td');
+                var td = tds[tds.length - 1];
+                td.getElementsByTagName('a')[0].click();
+                break;
+        }
+    } catch (e) {
+        sendResponse({error: "FROM CONTENT:\n" + e.stack});
     }
+});
+
+function getANodes() {
+    var divsAll = document.getElementsByTagName('div');
+    for (var i = 0; i < divsAll.length; i++) {
+        var div = divsAll[i];
+        if (div.dataset.asyncContext && div.dataset.asyncContext.indexOf('query') > -1) break;
+    }
+    var divsAll = div.getElementsByTagName('h3');
+    var ret = [];
+    for (var i = 0; i < divsAll.length; i++) {
+        ret.push(divsAll[i].getElementsByTagName('a')[0]);
+    }
+    return ret;
 }
 
-window.doKeyboardEvent = function(type, char, obj) {
-    var pressEvent = document.createEvent('KeyboardEvent');
-    pressEvent.initKeyboardEvent(
-        "key"+type,             //type
-        true,                   //bubble
-        true,                   //cancelable
-        window,                 //view
-        'q',                   //char
-        'q'.charCodeAt(0),     //key
-        0,                      //location
-        false,                   //repeat
-        ""                     //modifiers
-    );
-    //console.log(pressEvent);
-    obj.dispatchEvent(pressEvent);
-};
-
-window.doKeyboardEvent1 = function(type, char) {
-    if (type == undefined) type='press';
-    if (char == undefined) char = 'q';
-    /*opt = {
-        code: 'Key'+char.toUpperCase(),
-        key: char,
-        view: window,
-        keyCode: char.charCodeAt(0),
-        charCode: char.charCodeAt(0),
-        which: char.charCodeAt(0),
-        bubbles: true,
-        cancelable: true,
-        isComposing: false,
-        composed : true,
-    };*/
-    opt = char;
-    console.log(opt);
-    var pressEvent = new KeyboardEvent("key"+type, opt);
-    //console.log(pressEvent);
-    input.dispatchEvent(pressEvent);
-}
+document.addEventListener('DOMContentLoaded', function() {
+    readyDate = new Date();
+});

@@ -8,23 +8,23 @@
         "default_popup": "/popup.html"
     },
     "background": {
-        "scripts": ["/js/background.js"],
+        "scripts": ["/js/functions.js", "/js/background.js"],
         "persistent": true
     },
     "content_scripts": [
         {
             "matches": [
-                "https://www.google.com/*",
-                "https://www.google.tm/*"
+                "<all_urls>"
             ],
-            "js": ["/js/jquery-3.2.1.min.js", "/js/content.js"]
+            "js": ["/js/jquery-3.2.1.min.js", "/js/functions.js", "/js/content.js"],
+            "run_at": "document_start"
         }
     ],
     "web_accessible_resources": [
         "js/include.js"
     ],
     "permissions": [
-        "https://www.google.com/*",
+        "<all_urls>",
         "tabs",
         "storage",
         "background",
