@@ -55,6 +55,7 @@ chrome.extension.onMessage.addListener(function (request, sender, sendResponse) 
                 var tds = div.getElementsByTagName('table')[0].getElementsByTagName('td');
                 var td = tds[tds.length - 1];
                 td.getElementsByTagName('a')[0].click();
+                sendResponse();
                 break;
         }
     } catch (e) {

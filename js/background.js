@@ -1,3 +1,4 @@
+//googleIt(1,'nplus1.ru/',3, true)
 var workingTab;
 var readyDate;
 var page = 0;
@@ -29,22 +30,31 @@ function googleIt(search_term, click_url, wait_seconds, useActive) {
             }
         })
         .then(function() {return waitUntilReady();})
-        .then(function() {
-            return wait(rand(500, 1000));
-        })
-        .then(function() {
-            return enterSearchTerm(search_term);
-        })
+        .then(function() {return wait(rand(500, 1000));})
+        .then(function() {return enterSearchTerm(search_term);})
         .then(function() {return wait(2000);}) //wait cause content.js is waiting
-        .then(function() {
-            return waitUntilReady();
+        .then(function() {return checkThisPageForLink(click_url);})
+        .then(function(result) {
+            if (result != 'no_link') return wait(wait_seconds * 1000);
+            else return true;
         })
         .then(function() {
-            return wait(rand(500, 1000));
+            chrome.tabs.remove(workingTab.id);
+            return true;
         })
-        .then(function() {
-            return getLinks();
-        })
+}
+
+/* todo:
+logic: debug
+humanization: more human-like behavior (mouse events, scroll events)
+make it ready to get data from remote server and work with lists
+ */
+
+function checkThisPageForLink(click_url) {
+    page = 0;
+    return waitUntilReady()
+        .then(function() {return wait(rand(500, 1000));})
+        .then(function() {return getLinks();})
         .then(function(links) {
             var linkId = -1;
             for (var i = 0; i < links.length; i++) {
@@ -53,30 +63,16 @@ function googleIt(search_term, click_url, wait_seconds, useActive) {
                     break;
                 }
             }
-            return linkId;
-        })
-        .then(function(linkId) {
             if (linkId > -1) {
                 return clickLink(linkId);
             }
             else {
                 page++;
-                return nextPage();
+                if (page < 10) return nextPage().then(function() {checkThisPageForLink(click_url)});
+                else return 'no_link'
             }
         })
-        .then(function() {return waitUntilReady();})
-        .then(function() {return wait(wait_seconds * 1000);})
-        .then(function() {
-            chrome.tabs.remove(workingTab.id);
-            return true;
-        })
 }
-
-/* todo:
-logic: next page, then wait, than get links, etc until got link and click
-humanization: more human-like behavior (mouse events, scroll events)
-make it ready to get data from remote server and work with lists
- */
 
 function wait(milliseconds) {
     return new Promise(function (resolve) {
@@ -102,7 +98,7 @@ function waitUntilReady() {
 function enterSearchTerm(search_term) {
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: "enterSearchTerm", search_term: search_term}, function(response) {
-            if (response.error) console.error(response.error);
+            if (response && response.error) console.error(response.error);
             resolve(true);
         });
     });
@@ -114,6 +110,9 @@ function getLinks() {
         });
     });
 }
+function searchLink(links) {
+
+}
 function clickLink(linkId) {
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: 'clickLink', linkId: linkId}, function(response) {
@@ -123,9 +122,9 @@ function clickLink(linkId) {
     });
 }
 function nextPage() {
-    return new Promise(function() {
+    return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: 'nextPage'}, function(response) {
-            if (response.error) console.error(response.error);
+            if (response && response.error) console.error(response.error);
             resolve(true);
         });
     });
