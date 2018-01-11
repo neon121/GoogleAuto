@@ -1,136 +1,134 @@
-//googleIt(1,'nplus1.ru/',3, true)
-var workingTab;
-var readyDate;
-var page = 0;
-function googleIt(search_term, click_url, wait_seconds, useActive) {
-    var googleIt = new Promise(function(resolve) {
-            if (useActive) {
-                chrome.tabs.query(
-                    {
-                        active: true
-                    },
-                    function(tabs) {
-                        workingTab = tabs[0];
-                        resolve(workingTab);
-                    }
-                );
-            }
-            else {
-                chrome.tabs.create(
-                    {
-                        url: 'https://google.com',
-                        active: false,
-                        //pinned: true
-                    },
-                    function (tab) {
-                        workingTab = tab;
-                        resolve(workingTab);
-                    }
-                );
-            }
-        })
-        .then(function() {return waitUntilReady();})
-        .then(function() {return wait(rand(500, 1000));})
-        .then(function() {return enterSearchTerm(search_term);})
-        .then(function() {return wait(2000);}) //wait cause content.js is waiting
-        .then(function() {return checkThisPageForLink(click_url);})
-        .then(function(result) {
-            if (result != 'no_link') return wait(wait_seconds * 1000);
-            else return true;
-        })
-        .then(function() {
-            chrome.tabs.remove(workingTab.id);
-            return true;
-        })
+/*
+data: {
+ tasks: [] list of tasks,
+ isOn - bool,
+ hidden - bool,
+ user_id,
+ api - server API URL
 }
 
-/* todo:
-logic: debug
-humanization: more human-like behavior (mouse events, scroll events)
-make it ready to get data from remote server and work with lists
+tasks: [
+ traffic_id - id
+ user_id
+ traffic_type
+ search_term
+ click_url
+ wait_seconds
+ assigned_dt
+ browser_id
+ complete_dt
+]
+
+AJAX actions:
+getTasks - get tasks for user
+setCompleteTime - set complete time for task
+registerUser - add user to server
  */
 
-function checkThisPageForLink(click_url) {
-    page = 0;
-    return waitUntilReady()
-        .then(function() {return wait(rand(500, 1000));})
-        .then(function() {return getLinks();})
-        .then(function(links) {
-            var linkId = -1;
-            for (var i = 0; i < links.length; i++) {
-                if (links[i].indexOf(click_url) > -1) {
-                    linkId = i;
-                    break;
-                }
+try {
+    chrome.runtime.onInstalled.addListener(function () { //setting defaultValues (if not set)
+        var defaults = {
+            isOn: false,
+            hidden: false,
+            user_id: "",
+            api: "https://myvds.tk/googleAuto/index.php",
+            tasks: []
+        };
+        dGet().then(function (data) {
+            for (var name in defaults) {
+                if (data[name] == undefined) data[name] = defaults[name];
             }
-            if (linkId > -1) {
-                return clickLink(linkId);
+            dSet(data);
+        });
+    });
+
+    //setting alarms
+    chrome.alarms.clearAll();
+    for (var i = 0; i < 60; i++) {
+        chrome.alarms.create(
+            'EVERY_SECOND_' + i,
+            {
+                when: Date.now() + (i + 1) * 1000,
+                periodInMinutes: 1
+            }
+        );
+    }
+    chrome.alarms.onAlarm.addListener(function () {
+        dGet().then(function (data) {
+            if (!data.isOn || !data.user_id || !data.api) return;
+            if (Math.round(Date.now() / 1000) % 60 == 0) { //get tasks, remove old, once per minute
+                if (data.api != "") getTasks(data.api);
+                for (var i = 0; i < data.tasks.length; i++) {
+                    var complete_dt = data.tasks[i].complete_dt;
+                    if (complete_dt > 0 && Date.now() - complete_dt > 3600) { //remove older than this
+                        data.tasks.splice(i, 1);
+                        i--;
+                    }
+                }
+                dSet({tasks: data.tasks});
             }
             else {
-                page++;
-                if (page < 10) return nextPage().then(function() {checkThisPageForLink(click_url)});
-                else return 'no_link'
-            }
-        })
-}
-
-function wait(milliseconds) {
-    return new Promise(function (resolve) {
-        setTimeout(
-            function () {resolve(true);},
-            milliseconds);
-    });
-}
-function waitUntilReady() {
-    return new Promise(function(resolve) {
-        var t = setInterval(function() {
-            chrome.tabs.sendMessage(workingTab.id, {action: "getReadyDate"}, function(response) {
-                if (response && response.error) console.error(response.error);
-                if (typeof response == 'number' && response != readyDate) {
-                    readyDate = response;
-                    clearInterval(t);
-                    resolve(response);
+                if (!googling) {
+                    for (var i = 0; i < data.tasks.length; i++) { //googling
+                        var task = data.tasks[i];
+                        if (!task.complete_dt) {
+                            setTaskDone(task.traffic_id);
+                            googleIt(task.search_term, task.click_url, task.wait_seconds, data.hidden);
+                            break;
+                        }
+                    }
                 }
-            });
-        }, 10);
-    });
-}
-function enterSearchTerm(search_term) {
-    return new Promise(function(resolve) {
-        chrome.tabs.sendMessage(workingTab.id, {action: "enterSearchTerm", search_term: search_term}, function(response) {
-            if (response && response.error) console.error(response.error);
-            resolve(true);
+            }
         });
     });
-}
-function getLinks() {
-    return new Promise(function(resolve) {
-        chrome.tabs.sendMessage(workingTab.id, {action: "getLinks"}, function(response) {
-            resolve(response);
-        });
+} catch (e) {
+    console.error(e);
+    dGet().then(function(data) {
+        if (data.errors == undefined) data.errors = [];
+        data.errors.push(e);
+        dSet({errors: data.errors});
     });
 }
-function searchLink(links) {
 
-}
-function clickLink(linkId) {
-    return new Promise(function(resolve) {
-        chrome.tabs.sendMessage(workingTab.id, {action: 'clickLink', linkId: linkId}, function(response) {
-            if (response && response.error) console.error(response.error);
-            resolve(true);
+function getTasks(api) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", api, true);
+    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.send('user_id=' + encodeURIComponent(data.user_id) + '&action=getTasks');
+    xhr.onreadystatechange = function() {
+        if(xhr.readyState == XMLHttpRequest.DONE && xhr.status == 200) resolve(xhr.responseText);
+        var tasks = json.parse(xhr.responseText);
+        dGet().then(function(data) {
+            var tasksOld = data.tasks;
+            for (var i in tasks) {
+                var task = tasks[i];
+                var alreadyHave = false;
+                for (var j in tasksOld) {
+                    var taskOld = tasksOld[j];
+                    if (taskOld.task_id == task.task_id) {
+                        alreadyHave = true;
+                        break;
+                    }
+                }
+                if (!alreadyHave) tasksOld.push(task);
+            }
+            dSet({tasks: tasksOld});
         });
-    });
+    }
 }
-function nextPage() {
-    return new Promise(function(resolve) {
-        chrome.tabs.sendMessage(workingTab.id, {action: 'nextPage'}, function(response) {
-            if (response && response.error) console.error(response.error);
-            resolve(true);
-        });
-    });
-}
-function rand(min, max) {
-    var rand = min - 0.5 + Math.random() * (max - min + 1)
-    rand = Math.round(rand);
-    return rand;
+
+function setTaskDone(traffic_id) {
+    dGet().then(function(data) {
+        for(var i = 0; i < data.tasks.length; i++) {
+            if (data.tasks.traffic_id == traffic_id) {
+                data.tasks.complete_dt = Date.now();
+                var xhr = new XMLHttpRequest();
+                xhr.open("POST", data.api, true);
+                xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+                xhr.send('traffic_id=' + encodeURIComponent(data.user_id) + '&action=setCompleteTime');
+                break;
+            }
+        }
+        dSet({tasks: data.tasks});
+    })
 }

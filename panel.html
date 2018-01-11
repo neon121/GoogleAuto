@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>GoogleAuto, control</title>
+    <script type="text/javascript" src="/js/functions.js"></script>
+    <script type="text/javascript" src="/js/jquery-3.2.1.min.js"></script>
+    <script type="text/javascript" src="/js/panel.js"></script>
+    <link rel="stylesheet" href="/css/panel.css"/>
+</head>
+<body>
+    <div class="main">
+        <div class="group">
+            <label for="isOn">running</label> <input type="checkbox" id="isOn"/><br/>
+            <label for="isHidden">hidden</label> <input type="checkbox" id="isHidden"/><br/>
+            <span>user_id</span> <input type="text" id="user_id"><br/>
+            <span>Server API URL</span> <input type="text" id="api">
+        </div>
+        <div class="group">
+            <div class="total">
+                all: <span class="all">100</span>
+                passed last minute: <span class="lastMinute">20</span>
+                left: <span class="left">80</span><br/>
+
+            </div>
+        </div>
+        <div class="group scroll">
+            <table class="list">
+                <thead>
+                    <tr>
+                        <td>term</td>
+                        <td>link</td>
+                        <td>passed</td>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="group errors">
+            Errors<br/>
+            <pre></pre>
+        </div>
+    </div>
+</body>
+</html>

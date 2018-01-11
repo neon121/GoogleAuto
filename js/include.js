@@ -1,25 +1,23 @@
-console.log('content.js ready');
 var readyDate;
 var t = setInterval(function() {
-    if (document.readyState == 'complete') {
+    if (document.readyState === 'complete') {
         readyDate = new Date();
         clearInterval(t);
     }
 }, 10);
 
 chrome.extension.onMessage.addListener(function (request, sender, sendResponse) {
-    console.log(request);
     try {
         switch (request.action) {
             case 'getReadyDate':
-                if (readyDate == undefined) sendResponse(false);
+                if (readyDate === undefined) sendResponse(false);
                 else sendResponse(readyDate.getTime());
                 break;
             case 'enterSearchTerm':
                 var inputs = document.getElementsByTagName('form')[0].getElementsByTagName('input');
                 for (var i = 0; i < inputs.length; i++) {
                     var input = inputs[i];
-                    if (input.type == 'text' && input.spellcheck == false) break;
+                    if (input.type === 'text' && input.spellcheck === false) break;
                 }
                 input.value = request.search_term;
                 setTimeout(
@@ -33,8 +31,12 @@ chrome.extension.onMessage.addListener(function (request, sender, sendResponse) 
                 break;
             case 'getLinks':
                 var nodes = getANodes();
+                if (nodes === undefined) throw 'no links';
                 var resp = [];
-                for (var i = 0; i < nodes.length; i++) resp.push(nodes[i].href)
+                for (var i = 0; i < nodes.length; i++) {
+                    console.log(i, nodes);
+                    resp.push(nodes[i].href)
+                }
                 sendResponse(resp);
                 break;
             case 'clickLink':
@@ -52,10 +54,30 @@ chrome.extension.onMessage.addListener(function (request, sender, sendResponse) 
                         div.attributes.role.value == 'navigation'
                     ) break;
                 }
-                var tds = div.getElementsByTagName('table')[0].getElementsByTagName('td');
+                var node = div.getElementsByTagName('table');
+                if (node.length == 0) throw 'no table';
+                var tds = node[0].getElementsByTagName('td');
                 var td = tds[tds.length - 1];
                 td.getElementsByTagName('a')[0].click();
                 sendResponse();
+                break;
+            case 'scroll':
+                var scrollStart = window.pageYOffset;
+                var maxY = document.documentElement.scrollHeight - window.innerHeight;
+                if (request.y == undefined || request.y > maxY) var targetY = maxY;
+                else targetY = request.y;
+                var t = setInterval(function() {
+                    if (window.pageYOffset == targetY) {
+                        clearInterval(t);
+                        sendResponse('scroll');
+                    }
+                    else {
+                        var scrollNow = window.pageYOffset;
+                        var step = Math.round((targetY - scrollStart) / 100);
+                        window.scroll({top: scrollNow + step});
+                    }
+                }, 15);
+                sendResponse(true);
                 break;
         }
     } catch (e) {
@@ -72,7 +94,8 @@ function getANodes() {
     var divsAll = div.getElementsByTagName('h3');
     var ret = [];
     for (var i = 0; i < divsAll.length; i++) {
-        ret.push(divsAll[i].getElementsByTagName('a')[0]);
+        var a = divsAll[i].getElementsByTagName('a')[0];
+        if (a != undefined) ret.push(a);
     }
     return ret;
 }
