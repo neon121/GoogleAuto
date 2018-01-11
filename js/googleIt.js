@@ -51,16 +51,24 @@ function googleIt(search_term, click_url, wait_seconds, hidden, useActive) {
         .then(function() {return wait(2000);}) //wait cause content.js is waiting
         .then(function() {return checkThisPageForLink(click_url);})
         .then(function(result) {
-            if (result != 'no_link') return wait(wait_seconds * 1000);
-            else return true;
+            if (result != 'no_link') {
+                console.log('got link');
+                return waitUntilReady().then(function() {return wait((wait_seconds + 2) * 1000)});
+            }
+            else {
+                console.log('no link');
+                return true;
+            }
         })
         .then(function() {
+            console.log('close');
             chrome.tabs.remove(workingTab.id);
             googling = false;
             return true;
         })
 }
 function checkThisPageForLink(click_url) {
+    console.log('checkThisPageForLink');
     return (new Promise(function(resolve){resolve(true)}))
         .then(function() {return waitUntilReady()})
         .then(function() {return wait(rand(1000, 4000));})
@@ -80,12 +88,13 @@ function checkThisPageForLink(click_url) {
             }
             else {
                 page++;
-                if (page < 10) return nextPage().then(function() {checkThisPageForLink(click_url)});
+                if (page < 10) return nextPage().then(function() {return checkThisPageForLink(click_url)});
                 else return 'no_link'
             }
         })
 }
 function wait(milliseconds) {
+    console.log('wait', milliseconds);
     return new Promise(function (resolve) {
         setTimeout(
             function () {
@@ -96,6 +105,7 @@ function wait(milliseconds) {
     });
 }
 function scroll(val) {
+    console.log('scroll');
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: "scroll", y: val}, function(response) {
             if (response && response.error) throw(response.error);
@@ -104,6 +114,7 @@ function scroll(val) {
     });
 }
 function waitUntilReady() {
+    console.log('waitUntilReady');
     return new Promise(function(resolve) {
         var t = setInterval(function() {
             chrome.tabs.sendMessage(workingTab.id, {action: "getReadyDate"}, function(response) {
@@ -118,6 +129,7 @@ function waitUntilReady() {
     });
 }
 function enterSearchTerm(search_term) {
+    console.log('enterSearchTerm');
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: "enterSearchTerm", search_term: search_term}, function(response) {
             if (response && response.error) throw(response.error);
@@ -126,6 +138,7 @@ function enterSearchTerm(search_term) {
     });
 }
 function getLinks() {
+    console.log('getLinks');
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: "getLinks"}, function(response) {
             if (response && response.error) throw(response.error);
@@ -134,6 +147,7 @@ function getLinks() {
     });
 }
 function clickLink(linkId) {
+    console.log('clickLink');
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: 'clickLink', linkId: linkId}, function(response) {
             if (response && response.error) throw(response.error);
@@ -142,6 +156,7 @@ function clickLink(linkId) {
     });
 }
 function nextPage() {
+    console.log('nextPage');
     return new Promise(function(resolve) {
         chrome.tabs.sendMessage(workingTab.id, {action: 'nextPage'}, function(response) {
             if (response && response.error) throw(response.error);

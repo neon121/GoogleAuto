@@ -30,16 +30,20 @@ $(function() {
         for (var i = 0; i < data.tasks.length; i++) {
             var task = data.tasks[i];
             var complete_dt = task.complete_dt;
-            if (complete_dt == 0) left++;
-            else if (Date.now() - complete_dt < 60) lastMinute++;
-            var ready = complete_dt == 0 ? '' : '+';
+            if (complete_dt > 0) {
+                left++;
+                if ((Date.now() - complete_dt) / 1000 < 60) lastMinute++;
+                var ready = '+';
+            }
+            else ready = '';
             var html = "<tr><td>"+task.search_term+"</td><td>"+task.click_url+"</td><td>"+ready+"</td></tr>";
             $('.list tbody').append(html)
         }
         $('.lastMinute').text(lastMinute);
         $('.left').text(left);
 
-        for (var i = 0; i < data.errors.length; i++) {
+        if (data.errors.length == 0) $('.errors').remove();
+        else for (var i = 0; i < data.errors.length; i++) {
             $('.errors pre').append(data.errors[i]);
         }
     });
